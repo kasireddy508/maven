@@ -371,7 +371,7 @@ public class DefaultProjectBuilder
         {
             noErrors =
                 build( results, new ArrayList<MavenProject>(), projectIndex, interimResults, request,
-                       new HashMap<File, Boolean>() ) && noErrors;
+                       new HashMap<File, Boolean>(), config.session ) && noErrors;
         }
         finally
         {
@@ -572,7 +572,8 @@ public class DefaultProjectBuilder
 
     private boolean build( List<ProjectBuildingResult> results, List<MavenProject> projects,
                            Map<String, MavenProject> projectIndex, List<InterimResult> interimResults,
-                           ProjectBuildingRequest request, Map<File, Boolean> profilesXmls )
+                           ProjectBuildingRequest request, Map<File, Boolean> profilesXmls,
+                           RepositorySystemSession session )
     {
         boolean noErrors = true;
 
@@ -587,7 +588,8 @@ public class DefaultProjectBuilder
 
                 List<MavenProject> modules = new ArrayList<>();
                 noErrors =
-                    build( results, modules, projectIndex, interimResult.modules, request, profilesXmls ) && noErrors;
+                    build( results, modules, projectIndex, interimResult.modules, request, profilesXmls, session )
+                    && noErrors;
 
                 projects.addAll( modules );
                 projects.add( project );
@@ -595,7 +597,14 @@ public class DefaultProjectBuilder
                 project.setExecutionRoot( interimResult.root );
                 project.setCollectedProjects( modules );
 
-                results.add( new DefaultProjectBuildingResult( project, result.getProblems(), null ) );
+                DependencyResolutionResult resolutionResult = null;
+
+                if ( request.isResolveDependencies() )
+                {
+                    resolutionResult = resolveDependencies( project, session );
+                }
+
+                results.add( new DefaultProjectBuildingResult( project, result.getProblems(), resolutionResult ) );
             }
             catch ( ModelBuildingException e )
             {
